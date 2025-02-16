@@ -8,7 +8,7 @@ def log_message():
     data = request.json
     msg_id = data["id"]
     if msg_id in logs:
-        return "Duplicate message ignored", 200
+        return "Duplicate message ignored\n", 200
     logs[msg_id] = data["msg"]
     print(f"Logged: {data['msg']}")
     return "Logged", 200
