@@ -51,6 +51,10 @@ Facade service console
 
 ![Example Image](images/example_7.png)
 
+Messages service console
+
+![Example Image](images/example_10.png)
+
 Deduplicate protection for logging service example (we will use direct post request to logging service with existing uuid)
 
 ```curl -X POST http://localhost:5001/log -H "Content-Type: application/json" -d '{"id": "EXISTING_UUID", "msg": "message 5"}'```
