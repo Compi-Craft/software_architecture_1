@@ -7,4 +7,4 @@ def get_static_message():
     return "not implemented yet"
 
 if __name__ == '__main__':
-    app.run(port=5002, debug=True)
+    app.run(port=5004, debug=True)
