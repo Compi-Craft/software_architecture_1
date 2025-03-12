@@ -1,4 +1,4 @@
-# Homework 1
+# Homework 3
 ## Bohdan Ozarko
 
 ### Installation
@@ -11,52 +11,41 @@
 
 Run all services
 
-```python3 facade_service.py```<br>
+```gunicorn -b 127.0.0.1:5001 logging_service:app```<br>
+```gunicorn -b 127.0.0.1:5002 logging_service:app```<br>
+```gunicorn -b 127.0.0.1:5003 logging_service:app```<br>
 ```python3 logging_service.py```<br>
 ```python3 messages_service.py```<br>
 
-Post request to facade service
+1. Отримуємо три ноди hazelcast
 
-```curl -X POST http://localhost:5000/post -H "Content-Type: application/json" -d '{"msg": <your_message_here>}'```
+![Example Image](images/image_1.png)
 
-![Example Image](images/example_1.png)
+2. Записуємо 10 повідомлень через fill_messages.py скрипт
 
-Logging service console
+![Example Image](images/image_2.png)
 
-![Example Image](images/example_2.png)
+Отримуємо такий розподіл повідомлень
 
-Get request to facade service
+![Example Image](images/image_3.png)
 
-![Example Image](images/example_3.png)
+3. Звернення до кожного екземпляру logging_service відбувалося випадковим чином:
+![Example Image](images/image_4.png)
+![Example Image](images/image_5.png)
+![Example Image](images/image_6.png)
 
-### Additional task: retry and deduplicate mechanisms
+4. Прочитаємо через curl повідомлення
 
-Retry mechanism if logging service is off for post request
+```curl -X GET http://localhost:5000/get```
 
-![Example Image](images/example_5.png)
+Отримаємо:
+![Example Image](images/image_7.png)
 
-Facade service console
+5. Вимкнемо екземпляри logging_service на портах 5002 і 5003:
+![Example Image](images/image_8.png)
 
-![Example Image](images/example_4.png)
+Тепер всі записи знаходяться в одній ноді
 
-Logging service console
-
-![Example Image](images/example_8.png)
-
-Retry mechanism if logging or messaging service is off for get request
-
-![Example Image](images/example_6.png)
-
-Facade service console
-
-![Example Image](images/example_7.png)
-
-Messages service console
-
-![Example Image](images/example_10.png)
-
-Deduplicate protection for logging service example (we will use direct post request to logging service with existing uuid)
-
-```curl -X POST http://localhost:5001/log -H "Content-Type: application/json" -d '{"id": "EXISTING_UUID", "msg": "message 5"}'```
-
-![Example Image](images/example_9.png)
+Прочитаєм їх через GET запит
+![Example Image](images/image_9.png)
+Все працює як раніше
