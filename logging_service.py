@@ -4,7 +4,7 @@ import os
 import signal
 import subprocess
 
-HAZELCAST_PATH = "/mnt/d/hazelcast-5.5.0/bin/hz"
+HAZELCAST_PATH = "/home/compicraft/hazelcast/hazelcast-5.5.0/bin/hz"
 app = Flask(__name__)
 
 hz_client = None
@@ -52,5 +52,5 @@ def get_logs():
 with app.app_context():
     init_hazelcast() 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     app.run(host="127.0.0.1", port=port, debug=True)
