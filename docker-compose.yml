@@ -1,8 +1,7 @@
-version: '2'
-
 services:
   zookeeper:
     image: wurstmeister/zookeeper:latest
+    container_name: zookeeper
     ports:
       - "2181:2181"
     networks:
@@ -14,6 +13,7 @@ services:
       - "9092:9092"
     expose:
       - "9093"
+    container_name: kafka1
     environment:
       KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka1:9093,OUTSIDE://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
@@ -32,6 +32,7 @@ services:
       - "9093:9092"
     expose:
       - "9093"
+    container_name: kafka2
     environment:
       KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka2:9093,OUTSIDE://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
@@ -50,6 +51,7 @@ services:
       - "9094:9092"
     expose:
       - "9093"
+    container_name: kafka3
     environment:
       KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka3:9093,OUTSIDE://localhost:9094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
@@ -59,6 +61,191 @@ services:
       KAFKA_CREATE_TOPICS: "test_topic:2:3"  # 3 partitions, replication factor of 2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - kafka_net
+
+  consul:
+    image: consul:1.15.4
+    container_name: consul
+    ports:
+      - "8500:8500"
+    networks:
+      - kafka_net
+    command: "agent -dev -client=0.0.0.0"
+  
+  consul_loader:
+    build:
+      context: .
+      dockerfile: Dockerfile.consul_loader
+    depends_on:
+      - consul
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - CONFIG_FILE=/app/config.json
+    networks:
+      - kafka_net
+
+
+  facade_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.facade_service
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+      - consul
+    container_name: facade_service # Проброс порту Flask
+    ports:
+      - "5000:5000"
+    expose:
+      - "5000"
+    networks:
+      - kafka_net
+
+  messages_service_1:
+    build:
+      context: .
+      dockerfile: Dockerfile.messages_service
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+      - consul
+    container_name: messages_service_1
+    ports:
+      - "5001:5000"
+    expose:
+      - "5000"
+    environment:
+      - SERVICE_NAME=messages_service_1
+      - PORT=5001
+    networks:
+      - kafka_net
+
+  messages_service_2:
+    build:
+      context: .
+      dockerfile: Dockerfile.messages_service
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+      - consul
+    container_name: messages_service_2
+    ports:
+      - "5002:5000"
+    expose:
+      - "5000"
+    environment:
+      - SERVICE_NAME=messages_service_2
+      - PORT=5002
+    networks:
+      - kafka_net
+
+  hazelcast_1:
+    image: hazelcast/hazelcast:5.5.0
+    container_name: hazelcast_1
+    ports:
+      - "5701:5701"
+    environment:
+      - HAZELCAST_CLUSTER_MEMBERS=hazelcast_2:5702,hazelcast_3:5703
+    networks:
+      - kafka_net
+
+  hazelcast_2:
+    image: hazelcast/hazelcast:5.5.0
+    container_name: hazelcast_2
+    ports:
+      - "5702:5702"
+    environment:
+      - HAZELCAST_CLUSTER_MEMBERS=hazelcast_1:5702,hazelcast_3:5703
+    networks:
+      - kafka_net
+
+  hazelcast_3:
+    image: hazelcast/hazelcast:5.5.0
+    container_name: hazelcast_3
+    ports:
+      - "5703:5703"
+    environment:
+      - HAZELCAST_CLUSTER_MEMBERS=hazelcast_2:5702,hazelcast_1:5703
+    networks:
+      - kafka_net
+
+
+  hazelcast_management_center:
+    image: hazelcast/management-center:5.5.0
+    container_name: hazelcast_management_center
+    ports:
+      - "8080:8080"
+    environment:
+      - HAZELCAST_HOST=hazelcast_1
+    networks:
+      - kafka_net
+    depends_on:
+      - hazelcast_1
+      - hazelcast_2
+      - hazelcast_3
+  
+  logging_service_1:
+    build:
+      context: .
+      dockerfile: Dockerfile.logging_service
+    depends_on:
+      - hazelcast_1
+      - hazelcast_2
+      - hazelcast_3
+      - consul
+    container_name: logging_service_1
+    ports:
+      - "5003:5000"
+    expose:
+      - "5000"
+    environment:
+      - SERVICE_NAME=logging_service_1
+      - PORT=5003
+    networks:
+      - kafka_net
+
+  logging_service_2:
+    build:
+      context: .
+      dockerfile: Dockerfile.logging_service
+    depends_on:
+      - hazelcast_1
+      - hazelcast_2
+      - hazelcast_3
+      - consul
+    container_name: logging_service_2
+    ports:
+      - "5004:5000"
+    expose:
+      - "5000"
+    environment:
+      - SERVICE_NAME=logging_service_2
+      - PORT=5004
+    networks:
+      - kafka_net
+
+  logging_service_3:
+    build:
+      context: .
+      dockerfile: Dockerfile.logging_service
+    depends_on:
+      - hazelcast_1
+      - hazelcast_2
+      - hazelcast_3
+      - consul
+    container_name: logging_service_3
+    ports:
+      - "5005:5000"
+    expose:
+      - "5000"
+    environment:
+      - SERVICE_NAME=logging_service_3
+      - PORT=5005
     networks:
       - kafka_net
 

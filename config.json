@@ -1,0 +1,5 @@
+{
+    "kafka/bootstrap_servers": "kafka1:9093,kafka2:9093,kafka3:9093",
+    "hazelcast/cluster_members": "hazelcast_1:5701,hazelcast_2:5702,hazelcast_3:5703"
+}
+  

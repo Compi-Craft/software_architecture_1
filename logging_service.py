@@ -1,37 +1,40 @@
 from flask import Flask, request
 import hazelcast
 import os
-import signal
-import subprocess
-
-HAZELCAST_PATH = "/home/compicraft/hazelcast/hazelcast-5.5.0/bin/hz"
+import consul
+import time
 app = Flask(__name__)
 
 hz_client = None
-hz_process = None
 logs = None
 
-def start_node():
-    """Start the Hazelcast node process if not already running."""
-    global hz_process
-    if hz_process is None:
-        hz_process = subprocess.Popen([HAZELCAST_PATH, "start"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Hazelcast node started.")
+consul_client = consul.Consul(host="consul")
 
-def stop_node():
-    """Stop the Hazelcast node process."""
-    global hz_process
-    if hz_process:
-        os.kill(hz_process.pid, signal.SIGTERM)
-        print("Hazelcast node stopped.")
-        hz_process = None
+def get_members(key):
+    data = None
+    while data is None:
+        index, data = consul_client.kv.get(key)
+        time.sleep(5)
+    return data['Value'].decode().split(",")
+
+cluster_members = get_members('hazelcast/cluster_members')
+
+def register_service(service_name, service_id, service_port):
+    """Реєстрація сервісу в Consul."""
+    consul_client.agent.service.register(
+        service_name,
+        service_id=service_id,
+        port=service_port,
+        tags=["api"],
+        check=consul.Check.http(f'http://{service_id}:{service_port}/health', interval="1s")
+    )
 
 def init_hazelcast():
     """Initialize the Hazelcast client only if it's not already running."""
     global hz_client, logs
-    if hz_client is None or not hz_client.lifecycle.is_running():
-        start_node()
-        hz_client = hazelcast.HazelcastClient(cluster_members=[])
+    if hz_client is None:
+        print("connecting to hazelcast")
+        hz_client = hazelcast.HazelcastClient(cluster_members=cluster_members)
         logs = hz_client.get_map("logs").blocking()
         print(f"Hazelcast client initialized in worker {os.getpid()}")
 
@@ -49,8 +52,17 @@ def get_logs():
     all_logs = dict(logs.entry_set())
     return " ".join(all_logs.values())
 
+@app.route('/health')
+def health_check():
+    return "OK", 200
+
 with app.app_context():
-    init_hazelcast() 
+    init_hazelcast()
+
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", ""))
+    service_name = os.getenv("SERVICE_NAME", "")
     port = int(os.environ.get("PORT", 5001))
-    app.run(host="127.0.0.1", port=port, debug=True)
+    register_service("logging_service", service_name, port)
+    # init_hazelcast()
+    app.run(host="0.0.0.0", port=port, debug=True)
