@@ -26,7 +26,7 @@ def register_service(service_name, service_id, service_port):
         service_id=service_id,
         port=service_port,
         tags=["api"],
-        check=consul.Check.http(f'http://{service_id}:{service_port}/health', interval="1s")
+        check=consul.Check.http(f'http://{service_id}:{service_port}/health', interval="10s")
     )
 
 def init_hazelcast():

@@ -44,12 +44,19 @@ def register_service(service_name, service_id, service_port):
         service_id=service_id,
         port=service_port,
         tags=["api"],
-        check=consul.Check.http(f'http://facade_service:{service_port}/health', interval="1s")
+        check=consul.Check.http(f'http://facade_service:{service_port}/health', interval="10s")
     )
 
 def get_service_links_by_name(service_name):
-    services = consul_client.health.service(service_name)
-    return services
+    services = consul_client.health.service(service_name, passing=True)
+    entries = []
+    for service in services[1]:
+        service_info = service['Service']
+        service_id = service_info['ID']
+        port = service_info['Port']
+        entry = f"{service_id}:{port}"
+        entries.append(entry)
+    return entries
 
 @app.route('/post', methods=['POST'])
 def post_message():
@@ -63,7 +70,7 @@ def post_message():
         return jsonify({"error": "No available logging-service"}), 503
     msg_id = str(uuid.uuid4())
     payload = {"id": msg_id, "msg": msg}
-    log_to_service = requests.post(f"{selected_service}/log", json=payload, timeout=5)
+    log_to_service = requests.post(f"http://{selected_service}/log", json=payload, timeout=5)
     if log_to_service.status_code != 200:
         return jsonify({"error": f"Logging service unreachable"}), 50
     future = producer.send('test_topic', msg.encode('utf-8'))
@@ -84,11 +91,11 @@ def get_messages():
     if not selected_message_service:
         return jsonify({"error": "No available logging-service"}), 503
 
-    log_response = requests.get(f"{selected_service}/logs", timeout=5)
+    log_response = requests.get(f"http://{selected_service}/logs", timeout=5)
     if log_response.status_code != 200:
         return jsonify({"error": f"Logging service unreachable"}), 50
     
-    msg_response = requests.get(f"{selected_message_service}/message", timeout=5)
+    msg_response = requests.get(f"http://{selected_message_service}/message", timeout=5)
     if msg_response.status_code != 200:
         return jsonify({"error": f"Message service unreachable"}), 50
     

@@ -28,17 +28,17 @@ def register_service(service_name, service_id, service_port):
         service_id=service_id,
         port=service_port,
         tags=["api"],
-        check=consul.Check.http(f'http://{service_id}:{service_port}/health', interval="1s")
+        check=consul.Check.http(f'http://{service_id}:{service_port}/health', interval="10s")
     )
 
 def get_kafka_consumer():
-    producer = None
-    while not producer:
+    consumer = None
+    while not consumer:
         try:
             consumer = KafkaConsumer(
                 'test_topic',
                 bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-                group_id=f'my-group-{uuid.uuid4()}',
+                group_id="my-consumer-group",  # Same group id for all instances
                 auto_offset_reset='earliest',
                 enable_auto_commit=True,
                 value_deserializer=lambda x: x.decode('utf-8')
@@ -49,6 +49,7 @@ def get_kafka_consumer():
     return consumer
 
 def consume_messages():
+    print("starting thread")
     consumer = get_kafka_consumer()
     print("consumer created")
     for message in consumer:

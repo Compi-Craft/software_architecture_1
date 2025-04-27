@@ -1,50 +1,51 @@
-# Homework 3
+# Homework 4
 ## Bohdan Ozarko
 
 ### Installation
-<mark>```git clone https://github.com/Compi-Craft/software_architecture_1.git```</mark>
-
+```git clone https://github.com/Compi-Craft/software_architecture_1.git```
+```git checkout micro_consul```
 ### Prerequisites
-<mark>```pip install -r requirements.txt```</mark><br>
-Also docker
+<mark>DOCKER</mark><br>
+
 ### Usage
 
 Run all services<br>
-```docker compose up -d```<br>
-```gunicorn -b 127.0.0.1:5001 logging_service:app```<br>
-```gunicorn -b 127.0.0.1:5002 logging_service:app```<br>
-```gunicorn -b 127.0.0.1:5003 logging_service:app```<br>
-```python3 logging_service.py```<br>
-```PORT=5004 python3 messages_service.py```<br>
-```PORT=5005 python3 messages_service.py```<br>
+```chmod +x run.sh```<br>
+```run.sh```<br>
 
-1. Отримуємо три ноди hazelcast
 
+1. Отримуємо набір контейнерів
 ![Example Image](images/image_1.png)
 
-2. Отримуємо наступну конфігурацію Kafka
-![Example Image](images/image_10.png)
-
-1. Записуємо 9 повідомлень через fill_messages.py скрипт
-
+1. Список сервісів у consul<br>
 ![Example Image](images/image_2.png)
+1. Записуємо 10 повідомлень через fill_messages.py скрипт<br>
+![Example Image](images/image_3.png)
 
-Отримуємо такий розподіл повідомлень у  message services
+    Фасад сервіс<br>
+    ![Example Image](images/image_4.png)
 
-![Example Image](images/image_11.png)
-![Example Image](images/image_12.png)
+    Логи logging сервісів<br>
+    ![Example Image](images/image_5.png)
+    ![Example Image](images/image_6.png)
+    ![Example Image](images/image_7.png)
 
-4. Зробимо get request, отримуємо набір повідомлень з випадково обраного message service
-![Example Image](images/image_13.png)
-### Перевірка відмовостійкості
-1. Вимикаємо message services
-![Example Image](images/image_14.png)
-2. Надсилаємо 9 повідомлень
-![Example Image](images/image_15.png)
-![Example Image](images/image_16.png)
-3. Вимикаємо одного з лідерів
-![alt text](images/image.png)
-4. Вмикаємо message service і дивимось чи зчитає
-![alt text](images/image_17.png)
-Перший запущений сервіс все зчитав і зберіг у пам'ять, отже реплікація працює
-![alt text](images/image_18.png)
+    Розподіл між нодами hazelcast<br>
+    ![Example Image](images/image_8.png)
+
+    Логи messages сервісів<br>
+    ![Example Image](images/image_9.png)
+
+    GET запит<br>
+    ![Example Image](images/image_10.png)
+
+1. Вимкнемо два логінг сервіса та один месадж і запишемо повідомлення знову
+
+    ```docker stop logging_service_1 logging_service_2 messages_service_1```
+
+    ![Example Image](images/image_11.png)
+    ![Example Image](images/image_12.png)
+    ![Example Image](images/image_13.png)
+    ![Example Image](images/image_14.png)
+
+    Все працює як раніше
